@@ -2,6 +2,20 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+/**
+ * @deprecated Este servicio está siendo reemplazado por servicios específicos:
+ * - AuthService
+ * - PersonService
+ * - CourseService
+ * - PaymentService
+ * - OfferingService
+ * - EnrollmentService
+ * - ChurchService
+ * - DashboardService
+ * 
+ * Por favor, usa los nuevos servicios en lugar de este.
+ */
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly baseUrl = 'http://localhost:8080/api';
