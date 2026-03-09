@@ -285,3 +285,11 @@ CHURCH
 | Payment → Enrollment | 1 : 1 |
 
 ---
+# https://drive.google.com/file/d/1ktGr0aEXaTGx-8u7r8kOqgnMa4-pucUp/view?usp=sharing
+
+# https://app.diagrams.net/#G1ktGr0aEXaTGx-8u7r8kOqgnMa4-pucUp#%7B%22pageId%22%3A%22EvIsfuhbd7gEGkhc1MSR%22%7D
+
+![alt text](<Diagrama MER erp_iglesias.jpg>)
+
+
+

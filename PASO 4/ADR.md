@@ -1,213 +1,368 @@
-# Architecture Decision Record (ADR)
-## Mejora arquitectónica del sistema ERP Iglesias mediante patrones de diseño y principios SOLID
+# (ADR) - ERP IGLESIAS
+
+**Título:** Refactorización Arquitectónica Aplicando Patrones de Diseño y Principios SOLID  
+**Estado:** 5 Implementados / 10 Propuestos  
+**Fecha:** 09 Marzo 2026
 
 ---
 
-# Estado
+# 1. Contexto
 
-Propuesto
+## 1.1 Stack Tecnológico Actual
 
----
-
-# Contexto
-
-El sistema **ERP Iglesias** es una aplicación web diseñada para gestionar información administrativa de iglesias. El sistema permite registrar personas, cursos, inscripciones, ofrendas, pagos y usuarios del sistema.
-
-El proyecto está compuesto por dos componentes principales:
-
-- **Frontend:** desarrollado en Angular
-- **Backend:** desarrollado en Java utilizando Spring Boot
-- **Base de datos:** PostgreSQL
-
-La aplicación se ejecuta utilizando **Docker**, con contenedores separados para frontend, backend y base de datos.
-
-Durante el análisis de la arquitectura actual se identificaron algunas oportunidades de mejora relacionadas con:
-
-- acoplamiento entre componentes
-- distribución de responsabilidades
-- extensibilidad del sistema
-- reutilización de código
-- mantenibilidad a largo plazo
-
-Para mejorar la calidad arquitectónica del sistema se propone aplicar **patrones de diseño y principios SOLID** en diferentes componentes del backend.
+| Capa | Tecnología | Versión |
+|-----|------------|--------|
+| Backend | Java + Spring Boot | 17 + 3.2.3 |
+| Frontend | Angular + TypeScript | 17 + 5.2.0 |
+| Base de Datos | PostgreSQL | 16 |
+| Seguridad | JWT + Spring Security | - |
+| Build | Maven | 3.9.6 |
+| Contenedorización | Docker | - |
 
 ---
 
-# Diagrama MER
+## 1.2 Estructura Actual del Proyecto
 
-El modelo entidad-relación del sistema está compuesto por las siguientes entidades principales:
+```text
+erp_iglesias/
+├── backend/
+│   ├── src/main/java/com/iglesia/
+│   │   ├── *.java (TODOS LOS ARCHIVOS EN UN SOLO PAQUETE)
+│   │   ├── PersonController.java
+│   │   ├── PersonRepository.java
+│   │   ├── Person.java
+│   │   ├── CourseController.java
+│   │   ├── CourseRepository.java
+│   │   ├── Course.java
+│   │   ├── ... (40+ archivos mezclados)
+│   │   └── SecurityConfig.java
+│   └── src/main/resources/application.properties
+├── frontend/
+│   ├── src/app/
+│   │   ├── api.service.ts (SERVICIO MONOLÍTICO)
+│   │   ├── *.component.ts (COMPONENTES EN RAÍZ)
+│   │   └── auth.guard.ts
+│   └── ...
+└── docker-compose.yml
+```
 
-- churches
-- people
-- courses
-- enrollments
-- offerings
-- payments
-- users
+## 1.3 Hallazgos del Diagnóstico
 
-## Relaciones principales
-- Church 1 ---- N Person
-- Church 1 ---- N Course
-- Person 1 ---- N Enrollment
-- Course 1 ---- N Enrollment
-- Person 1 ---- N Offering
-- Enrollment 1 ---- 1 Payment
-- Offering 1 ---- 1 Payment
+### Backend
+###	Problema	Impacto
+1.	Todo en un solo paquete (com.iglesia) Viola SRP, difícil mantenimiento
+2.	Lógica de negocio en controladores Controladores hacen demasiado
+3.	Validaciones inexistentes o inconsistentes	Datos inválidos
+4.	DTOs como clases internas No reutilizables
+5.	Queries incorrectas en repositorios Errores de compilación
+6.	Manejo de errores deficiente Sin feedback claro
 
+### Frontend
+###	Problema	Impacto
+7.	Servicio único api.service.ts con 18 métodos Monolito
+8.	Sin modelos/interfaces Datos como any
+9.	Componentes con mucha lógica Mezcla presentación y negocio
+10.	Sin manejo de errores consistente Usuario sin feedback
 
-Este modelo permite representar la estructura de información del sistema, donde una iglesia puede tener múltiples personas y cursos, y las personas pueden realizar inscripciones y registrar ofrendas.
+### Datos
+### Problema	Impacto
+11.	Documentos duplicados Inconsistencia
+12.	Campos numéricos con texto Datos inválidos
+13.	Emails sin validación Formato incorrecto
+---
+
+# 2. Diagrama MER (Modelo Entidad-Relación)
+
+![alt text](<Diagrama MER erp_iglesias.jpg>)
+-- 
+
+# 3. Decisiones Arquitectónicas
+
+## 3.1 Decisiones Implementadas
+
+### Decisión 1 — Service Layer Pattern
+
+#### Estado: Implementado
+#### Patrón: Single Responsibility Principle
+
+#### Descripción
+
+Separar la lógica de negocio de los controladores creando una capa de servicios.
+
+#### Justificación
+
+Los controladores solo deben manejar peticiones HTTP.
+La lógica de negocio debe estar encapsulada en servicios.
+
+#### Archivos
+
+backend/service/PersonService.java
+backend/PersonController.java
+backend/PersonRepository.java
 
 ---
 
-# Decisiones Arquitectónicas Propuestas
+### Decisión 2 — Strategy Pattern para Validaciones
 
-## Decisión 1: Aplicar Repository Pattern
+#### Estado: Implementado
+#### Patrón: Strategy Pattern + Open/Closed Principle
 
-**Patrón:** Repository  
-**Principio SOLID:** Single Responsibility Principle (SRP)
+#### Descripción
 
-Se propone mantener el acceso a datos encapsulado dentro de repositorios específicos para cada entidad del sistema.
+- Implementar validadores específicos para cada tipo de campo:
 
-Esto permite que las clases responsables de la lógica de negocio no dependan directamente de la implementación de acceso a base de datos.
+    - documento
 
-**Justificación**
+    - teléfono
 
-- separación clara entre lógica de negocio y persistencia
-- mayor facilidad para pruebas unitarias
-- reducción del acoplamiento entre capas
+    - email
 
+#### Archivos
+
+- validation/Validator.java
+- validation/DocumentValidator.java
+- validation/PhoneValidator.java
+- validation/EmailValidator.java
+- validation/ValidationService.java
+- service/PersonService.java
+
+#### Ejemplo:
+
+```public interface Validator<T> {
+    void validate(T value);
+}
+
+public class DocumentValidator implements Validator<String> {
+    public void validate(String value) {
+        if(!value.matches("^\\d+$")){
+            throw new ValidationException("Documento inválido");
+        }
+    }
+}
+```
 ---
 
-## Decisión 2: Implementar una capa de servicios (Service Layer)
+### Decisión 3 — DTO Pattern
 
-**Patrón:** Service Layer  
-**Principio SOLID:** SRP
+#### Estado: Implementado
+#### Patrón: DTO / Separation of Concerns
 
-La lógica de negocio debe centralizarse en clases de servicio en lugar de implementarse directamente en los controladores.
+#### Descripción
 
-**Justificación**
+- Separar DTOs en paquetes independientes.
 
-- mejora la organización del código
-- evita controladores demasiado grandes
-- facilita reutilizar lógica de negocio
+#### Archivos
 
----
+- dto/request/PersonRequest.java
+- dto/response/PersonResponse.java
 
-## Decisión 3: Aplicar el principio Open/Closed
+#### Ejemplo:
 
-**Principio SOLID:** Open/Closed Principle (OCP)
+```
+public record PersonRequest(
+    @NotBlank String firstName,
+    @NotBlank String lastName,
+    @Email String email
+){}
+```
 
-El sistema debe permitir agregar nuevas funcionalidades sin modificar el código existente.
+### Decisión 4 — Corrección de Repositorios
 
-Esto es especialmente importante en funcionalidades como el manejo de pagos o tipos de transacciones.
+#### Estado: Implementado
+#### Patrón: Repository Pattern
 
-**Justificación**
+#### Problema
 
-- mejora la extensibilidad del sistema
-- reduce el riesgo de errores al agregar nuevas funcionalidades
+#### Query incorrecta:
 
----
+- SELECT SUM(o.amount) FROM Offering o WHERE o.church.id = :churchId
 
-## Decisión 4: Implementar Strategy Pattern para el procesamiento de pagos
+#### Corrección
 
-**Patrón:** Strategy  
-**Principio SOLID:** OCP
+```
+SELECT SUM(o.amount) 
+FROM Offering o 
+WHERE o.person.church.id = :churchId
+```
 
-Se propone separar la lógica de procesamiento de pagos en distintas estrategias dependiendo del tipo de pago.
+### Decisión 5 — Servicios Especializados en Frontend
 
-Ejemplos:
+#### Estado: Implementado
+#### Patrón: SRP / Separation of Concerns
 
-- pago de inscripción a curso
-- pago de ofrenda
+#### Antes:
 
-**Justificación**
+``` 
+export class ApiService {
+ login()
+ listPeople()
+ createPerson()
+ listCourses()
+ // 18 métodos
+}
+```
 
-- elimina múltiples condicionales en el código
-- permite agregar nuevos tipos de pago fácilmente
-- mejora la flexibilidad del sistema
+#### Después:
 
----
+```
+export class PersonService {
+ list()
+ create()
+ update()
+ delete()
+}
+```
+```
+export class AuthService {
+ login()
+ logout()
+}
+``` 
 
-## Decisión 5: Aplicar Dependency Inversion Principle
+## 3.2 Decisiones Propuestas
 
-**Principio SOLID:** DIP
+### Decisión 6 — Factory Pattern
 
-Las clases de alto nivel deben depender de **abstracciones** y no de implementaciones concretas.
+#### Estado: Propuesto
 
-Esto implica que los servicios deben depender de interfaces y no directamente de implementaciones específicas.
+#### Encapsular creación de objetos complejos.
 
-**Justificación**
+```
+public class PersonFactory {
 
-- reduce el acoplamiento entre componentes
-- facilita el uso de pruebas unitarias
-- permite reemplazar implementaciones sin afectar otras partes del sistema
+ public static Person createFromRequest(PersonRequest request, Church church){
 
----
+  Person p = new Person();
+  p.setFirstName(request.firstName());
+  p.setLastName(request.lastName());
+  p.setDocument(request.document());
+  p.setPhone(request.phone());
+  p.setEmail(request.email());
+  p.setChurch(church);
 
-## Decisión 6: Implementar DTO Pattern
+  return p;
+ }
+}
+```
 
-**Patrón:** Data Transfer Object
+### Decisión 7 — Observer Pattern
 
-Se propone utilizar objetos DTO para transferir datos entre backend y frontend en lugar de exponer directamente las entidades del modelo.
+#### Estado: Propuesto
 
-**Justificación**
+#### Sistema de eventos para notificaciones.
 
-- mejora la seguridad de los datos
-- evita exponer la estructura interna del modelo
-- permite controlar qué información se envía al cliente
+```
+public class PaymentCompletedEvent {
+ private final Payment payment;
+}
 
----
+Listener:
 
-## Decisión 7: Implementar Factory Pattern para creación de pagos
+@EventListener
+public void handlePaymentCompleted(PaymentCompletedEvent event){
+ // enviar email
+}
+```
 
-**Patrón:** Factory Method
+### Decisión 8 — Template Method
 
-Se propone centralizar la creación de objetos relacionados con pagos mediante una fábrica que determine qué tipo de objeto crear según el contexto.
+#### Estado: Propuesto
 
-**Justificación**
+#### Estandarizar procesos de negocio.
 
-- desacopla la creación de objetos de su uso
-- simplifica la lógica de instanciación
-- facilita agregar nuevos tipos de pago
+```
+public abstract class PaymentProcess {
 
----
+ public final Payment execute(PaymentRequest request){
+  validate(request);
+  Payment payment = createPayment(request);
+  processPayment(payment);
+  notify(payment);
+  return payment;
+ }
 
-## Decisión 8: Aplicar Interface Segregation Principle
+ protected abstract void validate(PaymentRequest request);
+}
+```
 
-**Principio SOLID:** ISP
+### Decisión 9 — Facade Pattern
 
-Se propone dividir interfaces grandes en interfaces más pequeñas y específicas para evitar que las clases dependan de métodos que no utilizan.
+#### Estado: Propuesto
 
-**Justificación**
+#### Simplificar consumo de servicios.
 
-- mejora la claridad del diseño
-- reduce dependencias innecesarias
-- facilita la implementación de nuevas funcionalidades
+```
+@Injectable()
+export class ApiFacade {
 
----
+ constructor(
+  private personService: PersonService,
+  private courseService: CourseService,
+  private paymentService: PaymentService
+ ){}
 
-## Decisión 9: Implementar patrón Facade
+ getDashboardData(){
+  return forkJoin({
+   people: this.personService.list(),
+   courses: this.courseService.list(),
+   payments: this.paymentService.list()
+  });
+ }
+}
+```
 
-**Patrón:** Facade
+### Decisión 10 — Decorator Pattern
 
-Se propone crear una capa que simplifique el acceso a operaciones complejas del sistema, agrupando múltiples servicios en una interfaz más sencilla.
+#### Estado: Propuesto
 
-**Justificación**
+#### Logging y monitoreo transversal.
 
-- simplifica la interacción entre componentes
-- reduce la complejidad para los controladores
-- mejora la legibilidad del código
+```
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface LogExecutionTime {}
+```
 
----
+#### Aspecto:
 
-## Decisión 10: Centralizar validaciones del sistema
+```
+@Around("@annotation(LogExecutionTime)")
+public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
 
-**Principio SOLID:** SRP
+ long start = System.currentTimeMillis();
 
-Las validaciones de datos deben gestionarse en clases específicas en lugar de dispersarse en controladores o servicios.
+ Object result = joinPoint.proceed();
 
-**Justificación**
+ long elapsed = System.currentTimeMillis() - start;
 
-- evita duplicación de lógica
-- mejora la consistencia de las validaciones
-- facilita el mantenimiento del código
+ logger.info("{} ejecutado en {} ms", joinPoint.getSignature(), elapsed);
+
+ return result;
+}
+```
+
+# 4. Consecuencias
+
+## 4.1 Impacto Positivo
+| Aspecto | Antes | Después |
+|--------|------|--------|
+| Mantenibilidad | Código mezclado | Separación por capas |
+| Validación | Datos inválidos | Validaciones robustas |
+| Organización | Un paquete | Arquitectura por capas |
+| Frontend | Servicio monolítico | Servicios especializados |
+| Reutilización | DTO internos | DTO reutilizables |
+| Compilación | Queries erróneas | Queries corregidas |
+
+## 4.2 Trade-offs
+| Aspecto | Consideración |
+|--------|--------------|
+| Complejidad inicial | Más archivos |
+| Curva de aprendizaje | Nuevos patrones |
+| Tiempo de desarrollo | Refactorización inicial |
+| Performance | Impacto mínimo |
+
+
+# 5. Enlaces
+
+# Repositorio: https://github.com/sebastiian06/parcial-1-arquitectura-de-software.git
+
