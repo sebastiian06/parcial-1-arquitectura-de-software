@@ -11,19 +11,17 @@ public class DashboardController {
     private final PersonRepository personRepository;
     private final CourseRepository courseRepository;
     private final OfferingRepository offeringRepository;
-    private final PaymentRepository paymentRepository;
     private final ChurchRepository churchRepository;
+    // private final PaymentRepository paymentRepository; // Comentado temporalmente
 
     public DashboardController(
             PersonRepository personRepository,
             CourseRepository courseRepository,
             OfferingRepository offeringRepository,
-            PaymentRepository paymentRepository,
             ChurchRepository churchRepository) {
         this.personRepository = personRepository;
         this.courseRepository = courseRepository;
         this.offeringRepository = offeringRepository;
-        this.paymentRepository = paymentRepository;
         this.churchRepository = churchRepository;
     }
 
@@ -36,7 +34,7 @@ public class DashboardController {
         long totalPeople = personRepository.countByChurchId(churchId);
         long activeCourses = courseRepository.countByChurchIdAndActiveTrue(churchId);
         Double offeringsMonth = offeringRepository.sumAmountByChurchIdAndStatus(churchId, "COMPLETED");
-        long pendingPayments = 0L; // Temporalmente en 0 hasta arreglar PaymentRepository
+        long pendingPayments = 0L; // Temporal mientras arreglamos PaymentRepository
         
         return new DashboardResponse(
             totalPeople,
