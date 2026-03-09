@@ -1,7 +1,7 @@
 
 # Cambio 1: Service Layer Pattern
 
-## 📁 Archivos Modificados/Creados
+## Archivos Modificados/Creados
 
 ### Nuevos:
 - `backend/src/main/java/com/iglesia/service/PersonService.java`
@@ -12,10 +12,10 @@
 - `backend/src/main/java/com/iglesia/PersonController.java`
 - `backend/src/main/java/com/iglesia/PersonRepository.java`
 
-## 🎯 Descripción del Cambio
+## Descripción del Cambio
 Se aplicó el patrón Service Layer para separar la lógica de negocio del controlador. Antes, `PersonController` manejaba todo: validaciones, acceso a datos y lógica de negocio.
 
-## 📸 Antes y Después
+## Antes y Después
 
 ### ANTES (PersonController.java):
 ```java
@@ -36,8 +36,10 @@ public PersonResponse create(@RequestBody PersonRequest request) {
     personRepository.save(person);
     return PersonResponse.from(person);
 }
-DESPUÉS (PersonService.java):
-java
+```
+
+### DESPUÉS (PersonService.java):
+```java
 @Service
 public class PersonService {
     @Transactional
@@ -53,8 +55,10 @@ public class PersonService {
         return PersonResponse.from(savedPerson);
     }
 }
-DESPUÉS (PersonController.java - limpio):
-java
+```
+
+### DESPUÉS (PersonController.java - limpio):
+```java
 @PostMapping
 public PersonResponse create(@Valid @RequestBody PersonRequest request) {
     return personService.createPerson(request); // Solo llama al service ✅

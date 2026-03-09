@@ -1,6 +1,6 @@
 # Cambio 2: Strategy Pattern para Validaciones
 
-## 📁 Archivos Modificados/Creados
+## Archivos Modificados/Creados
 
 ### Nuevos:
 - `backend/src/main/java/com/iglesia/validation/Validator.java`
@@ -14,7 +14,7 @@
 ### Modificados:
 - `backend/src/main/java/com/iglesia/service/PersonService.java`
 
-## 🎯 Descripción del Cambio
+## Descripción del Cambio
 Se implementó el patrón Strategy para encapsular las validaciones. Cada tipo de validación (documento, teléfono, email) es una estrategia independiente que implementa una interfaz común. Esto soluciona los hallazgos de la exploración donde se permitían datos inválidos.
 
 ## 🔍 Hallazgos que Soluciona
@@ -27,7 +27,7 @@ Se implementó el patrón Strategy para encapsular las validaciones. Cada tipo d
 | Documentos duplicados | Dos personas mismo documento | ❌ → ✅ Validación de unicidad |
 | Campos vacíos | document: "" | ❌ → ✅ Validación de requeridos |
 
-## 📸 Código - Interfaz Validator (Strategy)
+## Código - Interfaz Validator (Strategy)
 
 ```java
 public interface Validator<T> {
@@ -36,7 +36,7 @@ public interface Validator<T> {
 }
 
 ```
-## 📸 Código - DocumentValidator (Estrategia concreta)
+##  Código - DocumentValidator (Estrategia concreta)
 ```java
 public class DocumentValidator implements Validator<String> {
     private static final Pattern DIGITS_ONLY = Pattern.compile("^\\d+$");
@@ -55,7 +55,7 @@ public class DocumentValidator implements Validator<String> {
 }
 ```
 
-## 📸 Código - ValidationService (Orquestador)
+## Código - ValidationService (Orquestador)
 ```java
 @Service
 public class ValidationService {
@@ -80,7 +80,7 @@ public class ValidationService {
     }
 }
 ```
-## 📸 Integración con PersonService
+## Integración con PersonService
 ``` java
 @Service
 public class PersonService {
